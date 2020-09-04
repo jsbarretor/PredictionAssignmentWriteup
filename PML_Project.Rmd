@@ -1,0 +1,89 @@
+---
+title: "RF to precit the manner of do exercise"
+author: "Sebastian Barreto"
+date: "September of 2020"
+output: html_document
+---
+
+## The Data
+
+First the data sets are uploaded to the R environment. It is necessary to consider the empty data at the moment of uploading the databases, so the bla instruction **na.strings=c("","NA","#DIV/0!")** allows to characterize empty fields, with calculation error OR NAs as NAs
+
+```{r 1, include=T}
+data.Training <-read.csv("D:/Coursera/Practical Machine Learning/Proyecto/pml-training.csv", na.strings=c("","NA","#DIV/0!"))
+data.Test <-read.csv("D:/Coursera/Practical Machine Learning/Proyecto/pml-testing.csv", na.strings=c("","NA","#DIV/0!"))
+```
+
+The following is to eliminate all those columns that present data with NAs, and select only those variables that can provide useful information to the model
+
+```{r 2, include=T}
+library(caret)
+data.Training<- data.Training[ , colSums(is.na(data.Training)) == 0]
+data.Training <- data.Training[, c(8:60)]
+data.Test<- data.Test[ , colSums(is.na(data.Test)) == 0]
+```
+
+## Training, validation and set data
+
+The data set **data.Training** will be separated into two subsets: the model training set and the model validation set:
+
+```{r 3, include=T}
+data.Partition <- createDataPartition(y=data.Training$classe,
+                                    p=0.7, list=F)
+subset.Train <- data.Training[data.Partition,]
+subset.Validation <- data.Training[-data.Partition,]
+```
+
+A third set of data (**Test**) will serve to test the model, predicting the type of exercise in 20 observations of interest:
+
+```{r 4, include=T}
+subset.Test <- data.Test
+subset.Test <- subset.Test[, c(8:59)]
+```
+
+## Random Forest model
+
+For training the *RF**** model:
+
+```{r 5, include=T}
+mod.RF <- train(classe ~ ., data=subset.Train,
+                method="rf")
+```
+
+See model results:
+
+```{r 6, include=T}
+mod.RF
+```
+
+Los resultados del modelo indican que la mayor precisión (**0.9883115**) se alcanza al utilizar un valor de **2** para el parámetro **mtry**
+
+Podemos ver la importancia de las variables dentro del modelo con:
+
+```{r d, include=T}
+gbmImp <- varImp(mod.RF, scale = FALSE)
+gbmImp
+```
+
+The 5 most important variables are: 1) roll_belt , 2) yaw_belt, 3) magnet_dumbbell_z, 4) pitch_forearm and 5) magnet_dumbbell_y   
+
+## Validation and prediction on test
+
+```{r 7, include=T}
+prediction.Validation = predict(mod.RF, newdata = subset.Validation)
+confusionMatrix(prediction.Validation, subset.Validation$classe)
+```
+
+The result of the validation process with the validation set gives an accuracy of 0.9952, which allows us to indicate that it is a model of very high reliability
+
+To perform the class prediction on the Test data set we use
+
+```{r 8, include=T}
+prediction.Test = predict(mod.RF, newdata = subset.Test)
+```
+
+Te result of the predictiopn is:
+
+```{r sd, include=T}
+prediction.Test
+```
